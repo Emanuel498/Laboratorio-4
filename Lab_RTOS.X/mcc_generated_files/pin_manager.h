@@ -56,6 +56,188 @@
 */
 /**
   @Summary
+    Sets the GPIO pin, RA10, high using LATA10.
+
+  @Description
+    Sets the GPIO pin, RA10, high using LATA10.
+
+  @Preconditions
+    The RA10 must be set to an output.
+
+  @Returns
+    None.
+
+  @Param
+    None.
+
+  @Example
+    <code>
+    // Set RA10 high (1)
+    LED_CTRL_SetHigh();
+    </code>
+
+*/
+#define LED_CTRL_SetHigh()          ( LATASET = (1 << 10) )
+/**
+  @Summary
+    Sets the GPIO pin, RA10, low using LATA10.
+
+  @Description
+    Sets the GPIO pin, RA10, low using LATA10.
+
+  @Preconditions
+    The RA10 must be set to an output.
+
+  @Returns
+    None.
+
+  @Param
+    None.
+
+  @Example
+    <code>
+    // Set RA10 low (0)
+    LED_CTRL_SetLow();
+    </code>
+
+*/
+#define LED_CTRL_SetLow()           ( LATACLR = (1 << 10) )
+
+/**
+  @Summary
+    Sets a value to the GPIO pin.
+
+  @Description
+    Sets or Resets the GPIO pin, RA10, low or high using LATA10.
+
+  @Preconditions
+    The RA10 must be set to an output.
+
+  @Returns
+    None.
+
+  @Param
+    bool value; : value to be set to the GPIO pin.
+
+  @Example
+    <code>
+    // Set RA10 to low.
+    LED_CTRL_SetValue(false);
+    </code>
+
+*/
+inline static void LED_CTRL_SetValue(bool value)
+{
+  if(value)
+  {
+    LED_CTRL_SetHigh();
+  }
+  else
+  {
+    LED_CTRL_SetLow();
+  }
+}
+
+/**
+  @Summary
+    Toggles the GPIO pin, RA10, using LATA10.
+
+  @Description
+    Toggles the GPIO pin, RA10, using LATA10.
+
+  @Preconditions
+    The RA10 must be set to an output.
+
+  @Returns
+    None.
+
+  @Param
+    None.
+
+  @Example
+    <code>
+    // Toggle RA10
+    LED_CTRL_Toggle();
+    </code>
+
+*/
+#define LED_CTRL_Toggle()           ( LATAINV = (1 << 10) )
+/**
+  @Summary
+    Reads the value of the GPIO pin, RA10.
+
+  @Description
+    Reads the value of the GPIO pin, RA10.
+
+  @Preconditions
+    None.
+
+  @Returns
+    None.
+
+  @Param
+    None.
+
+  @Example
+    <code>
+    uint16_t portValue;
+
+    // Read RA10
+    postValue = LED_CTRL_GetValue();
+    </code>
+
+*/
+#define LED_CTRL_GetValue()         PORTAbits.RA10
+/**
+  @Summary
+    Configures the GPIO pin, RA10, as an input.
+
+  @Description
+    Configures the GPIO pin, RA10, as an input.
+
+  @Preconditions
+    None.
+
+  @Returns
+    None.
+
+  @Param
+    None.
+
+  @Example
+    <code>
+    // Sets the RA10 as an input
+    LED_CTRL_SetDigitalInput();
+    </code>
+
+*/
+#define LED_CTRL_SetDigitalInput()   ( TRISASET = (1 << 10) )
+/**
+  @Summary
+    Configures the GPIO pin, RA10, as an output.
+
+  @Description
+    Configures the GPIO pin, RA10, as an output.
+
+  @Preconditions
+    None.
+
+  @Returns
+    None.
+
+  @Param
+    None.
+
+  @Example
+    <code>
+    // Sets the RA10 as an output
+    LED_CTRL_SetDigitalOutput();
+    </code>
+
+*/
+#define LED_CTRL_SetDigitalOutput()   ( TRISACLR = (1 << 10) )
+/**
+  @Summary
     Sets the GPIO pin, RA13, high using LATA13.
 
   @Description
@@ -255,11 +437,11 @@ inline static void BTN2_SetValue(bool value)
   @Example
     <code>
     // Set RA7 high (1)
-    LEDA_SetHigh();
+    LED_A_SetHigh();
     </code>
 
 */
-#define LEDA_SetHigh()          ( LATASET = (1 << 7) )
+#define LED_A_SetHigh()          ( LATASET = (1 << 7) )
 /**
   @Summary
     Sets the GPIO pin, RA7, low using LATA7.
@@ -279,11 +461,11 @@ inline static void BTN2_SetValue(bool value)
   @Example
     <code>
     // Set RA7 low (0)
-    LEDA_SetLow();
+    LED_A_SetLow();
     </code>
 
 */
-#define LEDA_SetLow()           ( LATACLR = (1 << 7) )
+#define LED_A_SetLow()           ( LATACLR = (1 << 7) )
 
 /**
   @Summary
@@ -304,19 +486,19 @@ inline static void BTN2_SetValue(bool value)
   @Example
     <code>
     // Set RA7 to low.
-    LEDA_SetValue(false);
+    LED_A_SetValue(false);
     </code>
 
 */
-inline static void LEDA_SetValue(bool value)
+inline static void LED_A_SetValue(bool value)
 {
   if(value)
   {
-    LEDA_SetHigh();
+    LED_A_SetHigh();
   }
   else
   {
-    LEDA_SetLow();
+    LED_A_SetLow();
   }
 }
 
@@ -339,11 +521,11 @@ inline static void LEDA_SetValue(bool value)
   @Example
     <code>
     // Toggle RA7
-    LEDA_Toggle();
+    LED_A_Toggle();
     </code>
 
 */
-#define LEDA_Toggle()           ( LATAINV = (1 << 7) )
+#define LED_A_Toggle()           ( LATAINV = (1 << 7) )
 /**
   @Summary
     Reads the value of the GPIO pin, RA7.
@@ -365,11 +547,11 @@ inline static void LEDA_SetValue(bool value)
     uint16_t portValue;
 
     // Read RA7
-    postValue = LEDA_GetValue();
+    postValue = LED_A_GetValue();
     </code>
 
 */
-#define LEDA_GetValue()         PORTAbits.RA7
+#define LED_A_GetValue()         PORTAbits.RA7
 /**
   @Summary
     Configures the GPIO pin, RA7, as an input.
@@ -389,11 +571,11 @@ inline static void LEDA_SetValue(bool value)
   @Example
     <code>
     // Sets the RA7 as an input
-    LEDA_SetDigitalInput();
+    LED_A_SetDigitalInput();
     </code>
 
 */
-#define LEDA_SetDigitalInput()   ( TRISASET = (1 << 7) )
+#define LED_A_SetDigitalInput()   ( TRISASET = (1 << 7) )
 /**
   @Summary
     Configures the GPIO pin, RA7, as an output.
@@ -413,11 +595,11 @@ inline static void LEDA_SetValue(bool value)
   @Example
     <code>
     // Sets the RA7 as an output
-    LEDA_SetDigitalOutput();
+    LED_A_SetDigitalOutput();
     </code>
 
 */
-#define LEDA_SetDigitalOutput()   ( TRISACLR = (1 << 7) )
+#define LED_A_SetDigitalOutput()   ( TRISACLR = (1 << 7) )
 /**
   @Summary
     Sets the GPIO pin, RB14, high using LATB14.
@@ -437,11 +619,11 @@ inline static void LEDA_SetValue(bool value)
   @Example
     <code>
     // Set RB14 high (1)
-    LEDB_SetHigh();
+    LED_B_SetHigh();
     </code>
 
 */
-#define LEDB_SetHigh()          ( LATBSET = (1 << 14) )
+#define LED_B_SetHigh()          ( LATBSET = (1 << 14) )
 /**
   @Summary
     Sets the GPIO pin, RB14, low using LATB14.
@@ -461,11 +643,11 @@ inline static void LEDA_SetValue(bool value)
   @Example
     <code>
     // Set RB14 low (0)
-    LEDB_SetLow();
+    LED_B_SetLow();
     </code>
 
 */
-#define LEDB_SetLow()           ( LATBCLR = (1 << 14) )
+#define LED_B_SetLow()           ( LATBCLR = (1 << 14) )
 
 /**
   @Summary
@@ -486,19 +668,19 @@ inline static void LEDA_SetValue(bool value)
   @Example
     <code>
     // Set RB14 to low.
-    LEDB_SetValue(false);
+    LED_B_SetValue(false);
     </code>
 
 */
-inline static void LEDB_SetValue(bool value)
+inline static void LED_B_SetValue(bool value)
 {
   if(value)
   {
-    LEDB_SetHigh();
+    LED_B_SetHigh();
   }
   else
   {
-    LEDB_SetLow();
+    LED_B_SetLow();
   }
 }
 
@@ -521,11 +703,11 @@ inline static void LEDB_SetValue(bool value)
   @Example
     <code>
     // Toggle RB14
-    LEDB_Toggle();
+    LED_B_Toggle();
     </code>
 
 */
-#define LEDB_Toggle()           ( LATBINV = (1 << 14) )
+#define LED_B_Toggle()           ( LATBINV = (1 << 14) )
 /**
   @Summary
     Reads the value of the GPIO pin, RB14.
@@ -547,11 +729,11 @@ inline static void LEDB_SetValue(bool value)
     uint16_t portValue;
 
     // Read RB14
-    postValue = LEDB_GetValue();
+    postValue = LED_B_GetValue();
     </code>
 
 */
-#define LEDB_GetValue()         PORTBbits.RB14
+#define LED_B_GetValue()         PORTBbits.RB14
 /**
   @Summary
     Configures the GPIO pin, RB14, as an input.
@@ -571,11 +753,11 @@ inline static void LEDB_SetValue(bool value)
   @Example
     <code>
     // Sets the RB14 as an input
-    LEDB_SetDigitalInput();
+    LED_B_SetDigitalInput();
     </code>
 
 */
-#define LEDB_SetDigitalInput()   ( TRISBSET = (1 << 14) )
+#define LED_B_SetDigitalInput()   ( TRISBSET = (1 << 14) )
 /**
   @Summary
     Configures the GPIO pin, RB14, as an output.
@@ -595,11 +777,11 @@ inline static void LEDB_SetValue(bool value)
   @Example
     <code>
     // Sets the RB14 as an output
-    LEDB_SetDigitalOutput();
+    LED_B_SetDigitalOutput();
     </code>
 
 */
-#define LEDB_SetDigitalOutput()   ( TRISBCLR = (1 << 14) )
+#define LED_B_SetDigitalOutput()   ( TRISBCLR = (1 << 14) )
 /**
   @Summary
     Sets the GPIO pin, RB15, high using LATB15.

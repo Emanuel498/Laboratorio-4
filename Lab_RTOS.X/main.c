@@ -77,6 +77,10 @@ int main(void)
     for(;;);
 }
 
+void TASK_A(){
+    
+}
+
 void blinkLED( void *p_param ){
     // Add your code here
 }
