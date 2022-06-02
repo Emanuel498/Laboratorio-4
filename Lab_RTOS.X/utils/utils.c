@@ -17,44 +17,10 @@ char textoAPonerEnHercules[255];
 struct tm tiempoIngresadoUsuario; // Será el tiempo que seteará el usuario.
 app_register_t ultimaActualizacionUsuario; // Registro que se guardará luego de cada actualización de un led.
 //-----------------------------------------------------------------------------
-
-bool UT_delayms(ut_tmrDelay_t* p_timer, uint32_t p_ms) {
-    switch (p_timer->state) {
-        case UT_TMR_DELAY_INIT:
-            p_timer->startValue = TMR2_SoftwareCounterGet();
-            p_timer->state = UT_TMR_DELAY_WAIT;
-            return false;
-            break;
-        case UT_TMR_DELAY_WAIT:
-            if ((TMR2_SoftwareCounterGet() - p_timer->startValue) >= p_ms) {
-                p_timer->state = UT_TMR_DELAY_INIT;
-                return true;
-            } else {
-                // Me quedo en este estado hasta que termine el tiempo
-                return false;
-            }
-            break;
-    }
-}
-
 void Delay_Esperar_USB_Configurado(uint16_t var) {
     int inicial = TMR2_SoftwareCounterGet();
     while ((TMR2_SoftwareCounterGet() - inicial) < var) { //Se puede pasar porque no es exacto
         // Realizamos la espera del tiempo necesario en un bucle hasta cumplirse la condicion de arriba.
-    }
-}
-
-void PrendidoYApagadoDeLeds() {
-    if (UT_delayms(&miTimer, contador)) {
-        if (estaPrendido) {
-            contador = 800; // Tiempo que va a estar apagado
-            LED_A_SetLow();
-            estaPrendido = false;
-        } else {
-            contador = 400; // Tiempo que va a estar prendido
-            LED_A_SetHigh();
-            estaPrendido = true;
-        }
     }
 }
 
