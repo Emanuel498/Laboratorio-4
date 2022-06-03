@@ -17,7 +17,8 @@ build/default/production/main.o: main.c freeRTOS/include/FreeRTOS.h \
  utils/../mcc_generated_files/tmr2.h \
  utils/../mcc_generated_files/pin_manager.h \
  utils/../mcc_generated_files/rtcc.h utils/../utils/rgb_manager.h \
- utils/../utils/../platform/WS2812.h utils/../platform/WS2812.h
+ utils/../utils/../platform/WS2812.h utils/../platform/WS2812.h \
+ freeRTOS/include/queue.h
 
 freeRTOS/include/FreeRTOS.h:
 
@@ -72,3 +73,5 @@ utils/../utils/rgb_manager.h:
 utils/../utils/../platform/WS2812.h:
 
 utils/../platform/WS2812.h:
+
+freeRTOS/include/queue.h:

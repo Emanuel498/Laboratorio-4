@@ -53,8 +53,11 @@
 #include "mcc_generated_files/system.h"
 #include "mcc_generated_files/pin_manager.h"
 #include "utils/utils.h"
+#include "freeRTOS/include/queue.h"
 
 void blinkLED(void *p_param);
+void prenderLedsGuardadosEnLaCola(void *p_param);
+QueueHandle_t queue; // Son 4 porque cada char es un byte
 
 /*
                          Main application
@@ -63,8 +66,12 @@ int main(void) {
     // initialize the device
     SYSTEM_Initialize();
 
+    queue = xQueueCreate(5, 4);
+    
     /* Create the tasks defined within this file. */
     xTaskCreate(blinkLED, "taskA", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY + 1, NULL);
+    //xTaskCreate(recibirYProcesarComandosRecibidos, "taskB", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY + 1, NULL);
+    xTaskCreate(prenderLedsGuardadosEnLaCola, "taskC", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY + 1, NULL);
 
     /* Finally start the scheduler. */
     vTaskStartScheduler();
@@ -74,8 +81,19 @@ int main(void) {
     insufficient FreeRTOS heap memory available for the idle and/or timer tasks
     to be created.  See the memory management section on the FreeRTOS web site
     for more details. */
-    printf("NO funciono");
     for (;;);
+}
+/* el task B lo que hace es setear el Queue lo que hace es crear un timer, por cada una de los comandos a prender un led. 
+ * Es decir, se crea un timer que va a esperar los segundo para luego agregarlos a queue. Cabe destacar que taskB no es la encargada de 
+ * enviar los vales al queue, sino otra funcion.
+ * 
+ * Task C solo se encarga de prender y setear el valor del ultimo led prendido. Esto hay que proteger el seteo ya que una persona puede consultar
+ * a la misma vez la fecha y no se puede acceder al mismo valor desde dos lugares diferentes a la vez.
+ */
+
+void prenderLedsGuardadosEnLaCola(void *p_param){
+    char[4] ledYColorAPrender = xQueueReceive();
+    
 }
 
 void blinkLED(void *p_param) {
