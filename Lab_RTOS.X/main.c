@@ -155,7 +155,7 @@ void darUltimoLedPrendido() {
 }
 
 void recibirYProcesarComandosRecibidos(void *p_param2) {
-    // hacer con delay de freeRTOS
+    vTaskDelay(pdMS_TO_TICKS(4000));
     while (1) {
         if ((USBGetDeviceState() < CONFIGURED_STATE) ||
                 (USBIsDeviceSuspended() == true)) {
@@ -222,8 +222,7 @@ int main(void) {
     SYSTEM_Initialize();
     TMR2_SoftwareCounterClear(); //Limpia el contador para arrancar en 0, así no tener registros anteriores.
     TMR2_Start(); //Comienza a correr TRM2
-    Delay_Esperar_USB_Configurado(4000); // Se realiza para poder esperar a que abramos hercules ya que sino va a lanzarlo antes de que lo abramos.
-
+    
     semaCambiarColor = xSemaphoreCreateMutex();
     queue = xQueueCreate(5, 4);
 
