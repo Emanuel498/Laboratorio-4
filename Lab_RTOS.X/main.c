@@ -76,9 +76,9 @@ typedef enum {
 
 void blinkLED(void *p_param);
 void prenderLedsGuardadosEnLaCola(void *p_param);
-QueueHandle_t queue; // Son 4 porque cada char es un byte
 SemaphoreHandle_t semaCambiarColor; //Inicializa en 1.
-TimerHandle_t timerColocarTaskC;
+TimerHandle_t timerColocarEnQueue;
+QueueHandle_t queueGuardarLeds; // Son 4 porque cada char es un byte
 
 respuestaUsuario controlarHercules = MOSTRAR_MENU;
 char ledYColorAPrender[3];
@@ -86,7 +86,7 @@ bool estaPrendido = false;
 bool inicioDePrograma = true; // Flag que será utilizado para poder mostrar el menú luego de que se haya terminado alguna función.
 bool flagPoderElegirOpcion = true; // Flag que será utilizado para poder especificar sea ha de seleccionar una opcion. De esta manera el usuario no podrá ingrear a otra opción sin antes pasar por el menú.
 uint8_t numBytes;
-uint8_t buffer[64];
+uint8_t buffer[20];
 char cosasAPonerEnHercules[255];
 struct tm tiempoIngresadoUsuario;
 opcionSeleccionada eleccionUsuario = INGRESO_MENU;
@@ -98,7 +98,8 @@ void menu() {
         strcpy(cosasAPonerEnHercules, "\nIngrese fecha con el formato dd/mm/aaaa y la hora formato hh:mm:ss. Ej: 20/02/2000-14:34:55\n");
     } else if (buffer[0] == '2') {
         eleccionUsuario = INGRESO_COLOR_LED;
-        strcpy(cosasAPonerEnHercules, "\nIngrese led a prender y color con el formato led_a_prender-color_led. Ej: 4-3\n"
+        strcpy(cosasAPonerEnHercules, "\nIngrese led a prender, color y tiempo de espera antes de prender (en segundos)con el "
+                "formato led_a_prender-color_led-tiempo_espera_antes_de_prender. Ej: 4-3-5\n"
                 "Existen 8 leds, que se enumeran del 0 al 7.\n Los colores son: 0=ROJO 1=VERDE 2=AZUL 3=BLANCO 4=APAGADO\n");
     } else if (buffer[0] == '3') {
         eleccionUsuario = DAR_RESULTADO_ULTIMO_LED_MODIFICADO;
@@ -154,6 +155,10 @@ void darUltimoLedPrendido() {
     controlarHercules = ENVIANDO_RESPUESTA;
 }
 
+void callBackEnviarAQueue(TimerHandle_t xTimer){
+    
+}
+
 void recibirYProcesarComandosRecibidos(void *p_param2) {
     vTaskDelay(pdMS_TO_TICKS(4000));
     while (1) {
@@ -173,9 +178,12 @@ void recibirYProcesarComandosRecibidos(void *p_param2) {
                                 menu();
                             } else if (numBytes == 19 && !flagPoderElegirOpcion && (eleccionUsuario == INGRESO_FECHA)) {
                                 ingresoFecha();
-                            } else if (numBytes == 3 && !flagPoderElegirOpcion && (eleccionUsuario == INGRESO_COLOR_LED)) {
+                            } else if (numBytes == 5 && !flagPoderElegirOpcion && (eleccionUsuario == INGRESO_COLOR_LED)) {
                                 // CREO TIMER, COLOCO EN QUEUE Y LLAMO A TASK C
-                                //timerColocarTaskC = 
+                                // ("timerID", tiempoAEsperarAntesDePrenderLed, (void *) ledAPrender [sera la direcciond entro de la memoria que apunta
+                                //a el valor del led que hay, recordar que hay que castear luego], pdFALSE, funcionQueEnviaAQueue);
+                                // Voy a necesitar el el malloc para poder tener un heap extensble de los valores que yo les voy a pasar como led y color
+                                timerColocarEnQueue = xTimerCreate("timerID", atoi(buffer[4]), (void *) ledPrenderYApagar, pdFALSE, callBackEnviarAQueue);
                             } else if (numBytes == 1 && !flagPoderElegirOpcion && (eleccionUsuario == DAR_RESULTADO_ULTIMO_LED_MODIFICADO)) {
                                 darUltimoLedPrendido();
                             } else {
@@ -224,7 +232,7 @@ int main(void) {
     TMR2_Start(); //Comienza a correr TRM2
     
     semaCambiarColor = xSemaphoreCreateMutex();
-    queue = xQueueCreate(5, 4);
+    queueGuardarLeds = xQueueCreate(5, 4);
 
     /* Create the tasks defined within this file. */
     xTaskCreate(blinkLED, "taskA", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY + 1, NULL);
