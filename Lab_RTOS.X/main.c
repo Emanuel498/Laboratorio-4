@@ -87,7 +87,7 @@ bool inicioDePrograma = true; // Flag que será utilizado para poder mostrar el m
 bool flagPoderElegirOpcion = true; // Flag que será utilizado para poder especificar sea ha de seleccionar una opcion. De esta manera el usuario no podrá ingrear a otra opción sin antes pasar por el menú.
 uint8_t numBytes;
 uint8_t buffer[20];
-char cosasAPonerEnHercules[270];
+char cosasAPonerEnHercules[255];
 struct tm tiempoIngresadoUsuario;
 opcionSeleccionada eleccionUsuario = INGRESO_MENU;
 app_register_t ultimaActualizacionUsuario;
@@ -98,8 +98,7 @@ void menu() {
         strcpy(cosasAPonerEnHercules, "\nIngrese fecha con el formato dd/mm/aaaa y la hora formato hh:mm:ss. Ej: 20/02/2000-14:34:55\n");
     } else if (buffer[0] == '2') {
         eleccionUsuario = INGRESO_COLOR_LED;
-        strcpy(cosasAPonerEnHercules, "\nIngrese led a prender, color y tiempo de espera antes de prender (en segundos)con el "
-                "formato led_a_prender-color_led-tiempo_espera_antes_de_prender. Ej: 4-3-5\n"
+        strcpy(cosasAPonerEnHercules, "Ingrese formato led_a_prender-color_led-tiempo_espera_antes_de_prender_en_segundos. Ej: 4-3-5\n"
                 "Existen 8 leds, que se enumeran del 0 al 7.\n Los colores son: 0=ROJO 1=VERDE 2=AZUL 3=BLANCO 4=APAGADO\n");
     } else if (buffer[0] == '3') {
         eleccionUsuario = DAR_RESULTADO_ULTIMO_LED_MODIFICADO;
@@ -160,7 +159,7 @@ void callBackEnviarAQueue(TimerHandle_t xTimer) {
     xTimerDelete(xTimer, (TickType_t) 0);
 }
 
-void recibirYProcesarComandosRecibidos(void *p_param2) {
+void recibirYProcesarComandosRecibidos(void *p_param) {
     vTaskDelay(pdMS_TO_TICKS(4000));
     while (1) {
         if ((USBGetDeviceState() < CONFIGURED_STATE) ||
@@ -184,7 +183,8 @@ void recibirYProcesarComandosRecibidos(void *p_param2) {
                                 // ("timerID", tiempoAEsperarAntesDePrenderLed, (void *) ledAPrender [sera la direcciond dentro de la memoria que apunta
                                 //a el valor del led que hay, recordar que hay que castear luego], pdFALSE, funcionQueEnviaAQueue);
                                 // Voy a necesitar el el malloc para poder tener un heap extensble de los valores que yo les voy a pasar como led y color
-                                timerColocarEnQueue = xTimerCreate("timerID", atoi(&buffer[4]), pdFALSE, (void *) (&buffer[0]), callBackEnviarAQueue);
+                                timerColocarEnQueue = xTimerCreate("timerID", (TickType_t) 1000 * atoi(&buffer[4]), pdFALSE, (void *) (&buffer[0]), callBackEnviarAQueue);
+                                xTimerStart(timerColocarEnQueue, 10);
                             } else if (numBytes == 1 && !flagPoderElegirOpcion && (eleccionUsuario == DAR_RESULTADO_ULTIMO_LED_MODIFICADO)) {
                                 darUltimoLedPrendido();
                             } else {
@@ -223,27 +223,32 @@ void blinkLED(void *p_param) {
     }
 }
 
-void prenderLedsGuardadosEnLaCola(void *p_param3) {
-    //if (xSemaphoreTake(semaCambiarColor, (TickType_t) 10) == pdTRUE) {
-    if (xQueueReceive(queueGuardarLeds, ledYColorAPrender, (TickType_t) 10)) { //Recibo led a prender de la cola
-        char ledElegido[2];
-        char colorElegido[2];
-        memcpy(ledElegido, &ledYColorAPrender[0], 1); // Separo el led a prender.
-        memcpy(colorElegido, &ledYColorAPrender[2], 1); // Separo el color que se le colocará al led.
-        ledElegido[1] = '\0'; // Se agrega '\0' para poder determinarlo como string y poder utilizar correctamente la función 'atio'.
-        colorElegido[1] = '\0';
-        if (RGB_prender_led(atoi(ledElegido), atoi(colorElegido))) {
-            sprintf(cosasAPonerEnHercules, "\nHa ingresado prender el led N° %s con el color %s\n", ledElegido, colorElegido);
-            //------------------------COLOCAR SEMAFORO-------------------------------
-            ultimaActualizacionUsuario.color = atoi(colorElegido);
-            ultimaActualizacionUsuario.led = atoi(ledElegido);
-            ultimaActualizacionUsuario.time = (uint32_t) mktime(&tiempoIngresadoUsuario);
-            //--------------------------------------------------------------------------
-        } else {
-            strcpy(cosasAPonerEnHercules, "\nEl led o color elegido no son correctos. Vuelva a seleccionar la opción\n");
+void prenderLedsGuardadosEnLaCola(void *p_param) {
+    while (1) {
+        //if (xSemaphoreTake(semaCambiarColor, (TickType_t) 10) == pdTRUE) {
+        if (queueGuardarLeds != 0) {
+            if (xQueueReceive(queueGuardarLeds, ledYColorAPrender, (TickType_t) 10)) { //Recibo led a prender de la cola
+                char ledElegido[2];
+                char colorElegido[2];
+                memcpy(ledElegido, &ledYColorAPrender[0], 1); // Separo el led a prender.
+                memcpy(colorElegido, &ledYColorAPrender[2], 1); // Separo el color que se le colocará al led.
+                ledElegido[1] = '\0'; // Se agrega '\0' para poder determinarlo como string y poder utilizar correctamente la función 'atio'.
+                colorElegido[1] = '\0';
+                if (RGB_prender_led(atoi(ledElegido), atoi(colorElegido))) {
+                    sprintf(cosasAPonerEnHercules, "\nHa ingresado prender el led N° %s con el color %s\n", ledElegido, colorElegido);
+                    //------------------------COLOCAR SEMAFORO-------------------------------
+                    ultimaActualizacionUsuario.color = atoi(colorElegido);
+                    ultimaActualizacionUsuario.led = atoi(ledElegido);
+                    ultimaActualizacionUsuario.time = (uint32_t) mktime(&tiempoIngresadoUsuario);
+                    //--------------------------------------------------------------------------
+                } else {
+                    strcpy(cosasAPonerEnHercules, "\nEl led o color elegido no son correctos. Vuelva a seleccionar la opción\n");
+                }
+                controlarHercules = ENVIANDO_RESPUESTA;
+                inicioDePrograma = true;
+                flagPoderElegirOpcion = true;
+            }
         }
-        inicioDePrograma = true;
-        flagPoderElegirOpcion = true;
     }
     //}
     //------------------------------------------------------------------------------------------------------------------
