@@ -128,14 +128,16 @@ void ingresoFecha() {
     mm[2] = '\0';
     aaaa[4] = '\0';
     if (verificarCorrectoIngresoFecha(atoi(dd), atoi(mm), atoi(aaaa), atoi(hh), atoi(min), atoi(ss))) {
+        //-------------------------------TIENE QUE HABER SEMFORO-------------------------------
         tiempoIngresadoUsuario.tm_hour = atoi(hh);
         tiempoIngresadoUsuario.tm_min = atoi(min);
         tiempoIngresadoUsuario.tm_sec = atoi(ss);
         tiempoIngresadoUsuario.tm_mday = atoi(dd);
         tiempoIngresadoUsuario.tm_mon = atoi(mm);
-        tiempoIngresadoUsuario.tm_year = atoi(aaaa);
+        tiempoIngresadoUsuario.tm_year = 1900 + abs(atoi(aaaa)-1900);
         sprintf(cosasAPonerEnHercules, "\nLa fecha ingresada fue correcta: %s/%s/%s-%s:%s:%s\n", dd, mm, aaaa, hh, min, ss);
         RTCC_TimeSet(&tiempoIngresadoUsuario);
+        //--------------------------------------------------------------------------------------
     } else {
         strcpy(cosasAPonerEnHercules, "\nLa fecha ingresada no es correcta, favor de volver a intentar\n");
     }
@@ -240,7 +242,7 @@ void prenderLedsGuardadosEnLaCola(void *p_param) {
                     ultimaActualizacionUsuario.color = atoi(colorElegido);
                     ultimaActualizacionUsuario.led = atoi(ledElegido);
                     ultimaActualizacionUsuario.time = (uint32_t) mktime(&tiempoIngresadoUsuario);
-                    //--------------------------------------------------------------------------
+                    //-----------------------------------------------------------------------
                 } else {
                     strcpy(cosasAPonerEnHercules, "\nEl led o color elegido no son correctos. Vuelva a seleccionar la opción\n");
                 }
