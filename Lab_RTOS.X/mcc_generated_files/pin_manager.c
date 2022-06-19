@@ -78,7 +78,7 @@ void PIN_MANAGER_Initialize (void)
      * Setting the Weak Pull Up and Weak Pull Down SFR(s)
      ***************************************************************************/
     CNPDA = 0x2480;
-    CNPDB = 0x8000;
+    CNPDB = 0xC000;
     CNPDC = 0x0000;
     CNPDD = 0x0000;
     CNPUA = 0x0000;
@@ -98,7 +98,7 @@ void PIN_MANAGER_Initialize (void)
      * Setting the Analog/Digital Configuration SFR(s)
      ***************************************************************************/
     ANSELA = 0x1843;
-    ANSELB = 0x601C;
+    ANSELB = 0x201C;
     ANSELC = 0x0123;
 
 }
