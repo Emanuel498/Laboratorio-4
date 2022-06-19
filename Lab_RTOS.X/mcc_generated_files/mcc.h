@@ -51,10 +51,10 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#include "watchdog.h"
-#include "rtcc.h"
 #include "interrupt_manager.h"
 #include "exceptions.h"
+#include "rtcc.h"
+#include "watchdog.h"
 #include "tmr2.h"
 #include "usb/usb.h"
 

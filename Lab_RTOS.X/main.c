@@ -80,7 +80,7 @@ SemaphoreHandle_t semaCambiarColor; //Inicializa en 1.
 TimerHandle_t timerColocarEnQueue;
 QueueHandle_t queueGuardarLeds; // Son 4 porque cada char es un byte
 
-respuestaUsuario controlarHercules = MOSTRAR_MENU;
+respuestaUsuario controlarHercules = MOSTRAR_MENU; // Al iniciar el programa debemos mostrar el menú.
 char ledYColorAPrender[3];
 bool estaPrendido = false;
 bool inicioDePrograma = true; // Flag que será utilizado para poder mostrar el menú luego de que se haya terminado alguna función.
@@ -93,17 +93,23 @@ opcionSeleccionada eleccionUsuario = INGRESO_MENU;
 app_register_t ultimaActualizacionUsuario;
 
 void menu() {
-    if (buffer[0] == '1') { //Cambiar a switch luego
-        eleccionUsuario = INGRESO_FECHA;
-        strcpy(cosasAPonerEnHercules, "\nIngrese fecha con el formato dd/mm/aaaa y la hora formato hh:mm:ss. Ej: 20/02/2000-14:34:55\n");
-    } else if (buffer[0] == '2') {
-        eleccionUsuario = INGRESO_COLOR_LED;
-        strcpy(cosasAPonerEnHercules, "Ingrese formato led_a_prender-color_led-tiempo_espera_antes_de_prender_en_segundos. Ej: 4-3-5\n"
-                "Existen 8 leds, que se enumeran del 0 al 7.\n Los colores son: 0=ROJO 1=VERDE 2=AZUL 3=BLANCO 4=APAGADO\n");
-    } else if (buffer[0] == '3') {
-        eleccionUsuario = DAR_RESULTADO_ULTIMO_LED_MODIFICADO;
-    } else {
-        strcpy(cosasAPonerEnHercules, "\nIngreso incorrecto, vuelva a leer instrucciones\n");
+    switch (buffer[0]) {
+        case '1':
+            eleccionUsuario = INGRESO_FECHA;
+            strcpy(cosasAPonerEnHercules, "\nIngrese fecha con el formato dd/mm/aaaa y la hora formato hh:mm:ss. Ej: 20/02/2000-14:34:55\n");
+            break;
+        case '2':
+            eleccionUsuario = INGRESO_COLOR_LED;
+            strcpy(cosasAPonerEnHercules, "\nIngrese formato led_a_prender-color_led-tiempo_espera_antes_de_prender_en_segundos. Ej: 4-3-5\n"
+                    "Existen 8 leds, que se enumeran del 0 al 7.\n Los colores son: 0=ROJO 1=VERDE 2=AZUL 3=BLANCO 4=APAGADO\n");
+            break;
+        case '3':
+            eleccionUsuario = DAR_RESULTADO_ULTIMO_LED_MODIFICADO;
+            flagPoderElegirOpcion = false;
+            break;
+        default:
+            strcpy(cosasAPonerEnHercules, "\nIngreso incorrecto, vuelva a leer instrucciones\n");
+            break;
     }
     controlarHercules = ENVIANDO_RESPUESTA;
 }
@@ -134,7 +140,7 @@ void ingresoFecha() {
         tiempoIngresadoUsuario.tm_sec = atoi(ss);
         tiempoIngresadoUsuario.tm_mday = atoi(dd);
         tiempoIngresadoUsuario.tm_mon = atoi(mm);
-        tiempoIngresadoUsuario.tm_year = 1900 + abs(atoi(aaaa)-1900);
+        tiempoIngresadoUsuario.tm_year = abs(atoi(aaaa) - 1900);
         sprintf(cosasAPonerEnHercules, "\nLa fecha ingresada fue correcta: %s/%s/%s-%s:%s:%s\n", dd, mm, aaaa, hh, min, ss);
         RTCC_TimeSet(&tiempoIngresadoUsuario);
         //--------------------------------------------------------------------------------------
@@ -147,22 +153,27 @@ void ingresoFecha() {
 }
 
 void darUltimoLedPrendido() {
+    //if (xSemaphoreTake(semaCambiarColor, (TickType_t) 10) == pdTRUE) {
     RTCC_TimeGet(&tiempoIngresadoUsuario);
     sprintf(cosasAPonerEnHercules, "\nEl último led modificado fue %d, con un color %d, a la fecha: %d/%d/%d y hora: %d:%d:%d\n",
             ultimaActualizacionUsuario.led, ultimaActualizacionUsuario.color, tiempoIngresadoUsuario.tm_mday, tiempoIngresadoUsuario.tm_mon,
-            tiempoIngresadoUsuario.tm_year, tiempoIngresadoUsuario.tm_hour, tiempoIngresadoUsuario.tm_min, tiempoIngresadoUsuario.tm_sec);
-    inicioDePrograma = true;
-    flagPoderElegirOpcion = true;
+            (tiempoIngresadoUsuario.tm_year + 1900), tiempoIngresadoUsuario.tm_hour, tiempoIngresadoUsuario.tm_min, tiempoIngresadoUsuario.tm_sec);
     controlarHercules = ENVIANDO_RESPUESTA;
+    inicioDePrograma = true;
+    //}
+    //xSemaphoreGive(semaCambiarColor);
 }
 
 void callBackEnviarAQueue(TimerHandle_t xTimer) {
     xQueueSend(queueGuardarLeds, (void *) pvTimerGetTimerID(xTimer), (TickType_t) 100);
     xTimerDelete(xTimer, (TickType_t) 0);
+    free((void *) pvTimerGetTimerID(xTimer));
 }
 
 void recibirYProcesarComandosRecibidos(void *p_param) {
-    vTaskDelay(pdMS_TO_TICKS(4000));
+    SemaphoreHandle_t xSemaphore = *(SemaphoreHandle_t *) p_param;
+    vTaskDelay(pdMS_TO_TICKS(4000)); // Realizamos una espera para dar el tiempo, al usuario, a poder abrir Hercules de manera correcta de 4 segundos. 
+    // De lo contrario al abrir Hercules capaz que ya le mostro el menú de opciones antes de que abriera Hercules.
     while (1) {
         if ((USBGetDeviceState() < CONFIGURED_STATE) ||
                 (USBIsDeviceSuspended() == true)) {
@@ -170,25 +181,21 @@ void recibirYProcesarComandosRecibidos(void *p_param) {
         } else {
             CDCTxService();
             if (USBUSARTIsTxTrfReady()) { // Lo usamos para saber si la ultima transferencia fue completada y esta disponible pare recibir otro paquete.
+                numBytes = getsUSBUSART(buffer, sizeof (buffer));
                 switch (controlarHercules) {
                     case ESPERANDO_RESPUESTA:
-                        numBytes = getsUSBUSART(buffer, sizeof (buffer));
                         if (numBytes != 0) {
                             if ((numBytes == 1) && flagPoderElegirOpcion) {
-                                eleccionUsuario = INGRESO_MENU;
+                                //eleccionUsuario = INGRESO_MENU;
                                 flagPoderElegirOpcion = false;
                                 menu();
+                            } else if (numBytes == 5 && !flagPoderElegirOpcion && (eleccionUsuario == INGRESO_COLOR_LED)) {
+                                char* malloquin = (char *) malloc(3); //debo colocar los valores dentro
+                                memmove(&malloquin, &buffer[0], 3);
+                                timerColocarEnQueue = xTimerCreate("timerID", (TickType_t) 1000 * atoi(&buffer[4]), pdFALSE, (void *) &malloquin, callBackEnviarAQueue);
+                                xTimerStart(timerColocarEnQueue, 10);
                             } else if (numBytes == 19 && !flagPoderElegirOpcion && (eleccionUsuario == INGRESO_FECHA)) {
                                 ingresoFecha();
-                            } else if (numBytes == 5 && !flagPoderElegirOpcion && (eleccionUsuario == INGRESO_COLOR_LED)) {
-                                // CREO TIMER, COLOCO EN QUEUE Y LLAMO A TASK C
-                                // ("timerID", tiempoAEsperarAntesDePrenderLed, (void *) ledAPrender [sera la direcciond dentro de la memoria que apunta
-                                //a el valor del led que hay, recordar que hay que castear luego], pdFALSE, funcionQueEnviaAQueue);
-                                // Voy a necesitar el el malloc para poder tener un heap extensble de los valores que yo les voy a pasar como led y color
-                                timerColocarEnQueue = xTimerCreate("timerID", (TickType_t) 1000 * atoi(&buffer[4]), pdFALSE, (void *) (&buffer[0]), callBackEnviarAQueue);
-                                xTimerStart(timerColocarEnQueue, 10);
-                            } else if (numBytes == 1 && !flagPoderElegirOpcion && (eleccionUsuario == DAR_RESULTADO_ULTIMO_LED_MODIFICADO)) {
-                                darUltimoLedPrendido();
                             } else {
                                 strcpy(cosasAPonerEnHercules, "\nNo es un ingreso valido.\n");
                                 controlarHercules = ENVIANDO_RESPUESTA;
@@ -196,6 +203,10 @@ void recibirYProcesarComandosRecibidos(void *p_param) {
                         }
                         break;
                     case ENVIANDO_RESPUESTA:
+                        if (!flagPoderElegirOpcion && (eleccionUsuario == DAR_RESULTADO_ULTIMO_LED_MODIFICADO)) {
+                            darUltimoLedPrendido();
+                            flagPoderElegirOpcion = true;
+                        }
                         putUSBUSART(cosasAPonerEnHercules, strlen(cosasAPonerEnHercules));
                         controlarHercules = ESPERANDO_RESPUESTA;
                         if (inicioDePrograma) {
@@ -203,10 +214,10 @@ void recibirYProcesarComandosRecibidos(void *p_param) {
                         }
                         break;
                     case MOSTRAR_MENU:
-                        inicioDePrograma = false;
                         strcpy(cosasAPonerEnHercules, "\nPara fijar fecha y hora introduzca 1\n"
                                 "Para Encender/Apagar un led en particular introduzca 2\n"
                                 "Para consultar estado, fecha y hora del ultimo led modificado presione 3\n");
+                        inicioDePrograma = false;
                         eleccionUsuario = INGRESO_MENU;
                         controlarHercules = ENVIANDO_RESPUESTA;
                         break;
@@ -227,21 +238,23 @@ void blinkLED(void *p_param) {
 
 void prenderLedsGuardadosEnLaCola(void *p_param) {
     while (1) {
-        //if (xSemaphoreTake(semaCambiarColor, (TickType_t) 10) == pdTRUE) {
         if (queueGuardarLeds != 0) {
+            //if (xSemaphoreTake(semaCambiarColor, (TickType_t) 10) == pdTRUE) {
             if (xQueueReceive(queueGuardarLeds, ledYColorAPrender, (TickType_t) 10)) { //Recibo led a prender de la cola
                 char ledElegido[2];
                 char colorElegido[2];
                 memcpy(ledElegido, &ledYColorAPrender[0], 1); // Separo el led a prender.
                 memcpy(colorElegido, &ledYColorAPrender[2], 1); // Separo el color que se le colocará al led.
-                ledElegido[1] = '\0'; // Se agrega '\0' para poder determinarlo como string y poder utilizar correctamente la función 'atio'.
+                ledElegido[1] = '\0'; // Se agrega '\0' para poder determinarlo como string y poder utilizar correctamente la función 'atoi'.
                 colorElegido[1] = '\0';
                 if (RGB_prender_led(atoi(ledElegido), atoi(colorElegido))) {
-                    sprintf(cosasAPonerEnHercules, "\nHa ingresado prender el led N° %s con el color %s\n", ledElegido, colorElegido);
+                    LED_B_SetHigh();
+                    sprintf(cosasAPonerEnHercules, "\nHa ingresado prender el led N° %s con el color %s\n", *ledElegido, *colorElegido);
                     //------------------------COLOCAR SEMAFORO-------------------------------
-                    ultimaActualizacionUsuario.color = atoi(colorElegido);
-                    ultimaActualizacionUsuario.led = atoi(ledElegido);
+                    ultimaActualizacionUsuario.color = atoi((char*) colorElegido);
+                    ultimaActualizacionUsuario.led = atoi((char*) ledElegido);
                     ultimaActualizacionUsuario.time = (uint32_t) mktime(&tiempoIngresadoUsuario);
+
                     //-----------------------------------------------------------------------
                 } else {
                     strcpy(cosasAPonerEnHercules, "\nEl led o color elegido no son correctos. Vuelva a seleccionar la opción\n");
@@ -251,6 +264,7 @@ void prenderLedsGuardadosEnLaCola(void *p_param) {
                 flagPoderElegirOpcion = true;
             }
         }
+        //xSemaphoreGive(semaCambiarColor);
     }
     //}
     //------------------------------------------------------------------------------------------------------------------
@@ -267,11 +281,11 @@ int main(void) {
 
     semaCambiarColor = xSemaphoreCreateMutex();
     queueGuardarLeds = xQueueCreate(5, 4);
-
+    LED_A_SetHigh();
     /* Create the tasks defined within this file. */
     xTaskCreate(blinkLED, "taskA", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY + 1, NULL);
-    xTaskCreate(recibirYProcesarComandosRecibidos, "taskB", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY + 1, NULL);
-    xTaskCreate(prenderLedsGuardadosEnLaCola, "taskC", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY + 1, NULL);
+    xTaskCreate(recibirYProcesarComandosRecibidos, "taskB", configMINIMAL_STACK_SIZE, &semaCambiarColor, tskIDLE_PRIORITY + 1, NULL);
+    xTaskCreate(prenderLedsGuardadosEnLaCola, "taskC", configMINIMAL_STACK_SIZE, &semaCambiarColor, tskIDLE_PRIORITY + 1, NULL);
 
     /* Finally start the scheduler. */
     vTaskStartScheduler();
@@ -283,14 +297,6 @@ int main(void) {
     for more details. */
     for (;;);
 }
-
-/* el task B lo que hace es crear un timer, por cada una de los comandos a prender un led. 
- * Es decir, se crea un timer que va a esperar los segundo para luego agregarlos a queue. Cabe destacar que taskB no es la encargada de 
- * enviar los vales al queue, sino otra funcion.
- * 
- * Task C solo se encarga de prender y setear el valor del ultimo led prendido. Esto hay que proteger el seteo ya que una persona puede consultar
- * a la misma vez la fecha y no se puede acceder al mismo valor desde dos lugares diferentes a la vez.
- */
 
 void vApplicationMallocFailedHook(void) {
     /* vApplicationMallocFailedHook() will only be called if

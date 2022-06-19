@@ -92,7 +92,7 @@ static void WS2812_sendSingle( ws2812_t* p_led )
         // the pin will stay high for different times
         if(val&1){
             // if it is a 1, let it stay higher a bit longer
-            LED_CTRL_SetHigh( ); // 0.90 us
+            LED_B_SetHigh( ); // 0.90 us
             _nop( );
             _nop( );
             _nop( );
@@ -111,7 +111,7 @@ static void WS2812_sendSingle( ws2812_t* p_led )
             _nop( );
             _nop( );
             _nop( );
-            LED_CTRL_SetLow( ); // 0.35 us
+            LED_B_SetLow( ); // 0.35 us
             _nop( );
             _nop( );
             _nop( );
@@ -119,13 +119,13 @@ static void WS2812_sendSingle( ws2812_t* p_led )
             _nop( );
         }else{
             // but a 0 should go high and then low as fast as possible
-            LED_CTRL_SetHigh( ); // 0.35 us
+            LED_B_SetHigh( ); // 0.35 us
             _nop( );
             _nop( );
             _nop( );
             _nop( );
             _nop( );
-            LED_CTRL_SetLow( ); // 0.90 us
+            LED_B_SetLow( ); // 0.90 us
             _nop( );
             _nop( );
             _nop( );
