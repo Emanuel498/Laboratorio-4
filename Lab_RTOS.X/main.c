@@ -93,17 +93,23 @@ opcionSeleccionada eleccionUsuario = INGRESO_MENU;
 app_register_t ultimaActualizacionUsuario;
 
 void menu() {
-    if (buffer[0] == '1') { //Cambiar a switch luego
-        eleccionUsuario = INGRESO_FECHA;
-        strcpy(cosasAPonerEnHercules, "\nIngrese fecha con el formato dd/mm/aaaa y la hora formato hh:mm:ss. Ej: 20/02/2000-14:34:55\n");
-    } else if (buffer[0] == '2') {
-        eleccionUsuario = INGRESO_COLOR_LED;
-        strcpy(cosasAPonerEnHercules, "Ingrese formato led_a_prender-color_led-tiempo_espera_antes_de_prender_en_segundos. Ej: 4-3-5\n"
-                "Existen 8 leds, que se enumeran del 0 al 7.\n Los colores son: 0=ROJO 1=VERDE 2=AZUL 3=BLANCO 4=APAGADO\n");
-    } else if (buffer[0] == '3') {
-        eleccionUsuario = DAR_RESULTADO_ULTIMO_LED_MODIFICADO;
-    } else {
-        strcpy(cosasAPonerEnHercules, "\nIngreso incorrecto, vuelva a leer instrucciones\n");
+    switch (buffer[0]) {
+        case '1':
+            eleccionUsuario = INGRESO_FECHA;
+            strcpy(cosasAPonerEnHercules, "\nIngrese fecha con el formato dd/mm/aaaa y la hora formato hh:mm:ss. Ej: 20/02/2000-14:34:55\n");
+            break;
+        case '2':
+            eleccionUsuario = INGRESO_COLOR_LED;
+            strcpy(cosasAPonerEnHercules, "\nIngrese formato led_a_prender-color_led-tiempo_espera_antes_de_prender_en_segundos. Ej: 4-3-5\n"
+                    "Existen 8 leds, que se enumeran del 0 al 7.\n Los colores son: 0=ROJO 1=VERDE 2=AZUL 3=BLANCO 4=APAGADO\n");
+            break;
+        case '3':
+            eleccionUsuario = DAR_RESULTADO_ULTIMO_LED_MODIFICADO;
+            flagPoderElegirOpcion = false;
+            break;
+        default:
+            strcpy(cosasAPonerEnHercules, "\nIngreso incorrecto, vuelva a leer instrucciones\n");
+            break;
     }
     controlarHercules = ENVIANDO_RESPUESTA;
 }
@@ -133,7 +139,7 @@ void ingresoFecha() {
         tiempoIngresadoUsuario.tm_sec = atoi(ss);
         tiempoIngresadoUsuario.tm_mday = atoi(dd);
         tiempoIngresadoUsuario.tm_mon = atoi(mm);
-        tiempoIngresadoUsuario.tm_year = atoi(aaaa);
+        tiempoIngresadoUsuario.tm_year = abs(atoi(aaaa) - 1900);
         sprintf(cosasAPonerEnHercules, "\nLa fecha ingresada fue correcta: %s/%s/%s-%s:%s:%s\n", dd, mm, aaaa, hh, min, ss);
         RTCC_TimeSet(&tiempoIngresadoUsuario);
     } else {
@@ -148,7 +154,7 @@ void darUltimoLedPrendido() {
     RTCC_TimeGet(&tiempoIngresadoUsuario);
     sprintf(cosasAPonerEnHercules, "\nEl último led modificado fue %d, con un color %d, a la fecha: %d/%d/%d y hora: %d:%d:%d\n",
             ultimaActualizacionUsuario.led, ultimaActualizacionUsuario.color, tiempoIngresadoUsuario.tm_mday, tiempoIngresadoUsuario.tm_mon,
-            tiempoIngresadoUsuario.tm_year, tiempoIngresadoUsuario.tm_hour, tiempoIngresadoUsuario.tm_min, tiempoIngresadoUsuario.tm_sec);
+            (tiempoIngresadoUsuario.tm_year + 1900), tiempoIngresadoUsuario.tm_hour, tiempoIngresadoUsuario.tm_min, tiempoIngresadoUsuario.tm_sec);
     inicioDePrograma = true;
     flagPoderElegirOpcion = true;
     controlarHercules = ENVIANDO_RESPUESTA;
@@ -156,6 +162,7 @@ void darUltimoLedPrendido() {
 
 void callBackEnviarAQueue(TimerHandle_t xTimer) {
     xQueueSend(queueGuardarLeds, (void *) pvTimerGetTimerID(xTimer), (TickType_t) 100);
+
     xTimerDelete(xTimer, (TickType_t) 0);
 }
 
@@ -185,8 +192,6 @@ void recibirYProcesarComandosRecibidos(void *p_param) {
                                 // Voy a necesitar el el malloc para poder tener un heap extensble de los valores que yo les voy a pasar como led y color
                                 timerColocarEnQueue = xTimerCreate("timerID", (TickType_t) 1000 * atoi(&buffer[4]), pdFALSE, (void *) (&buffer[0]), callBackEnviarAQueue);
                                 xTimerStart(timerColocarEnQueue, 10);
-                            } else if (numBytes == 1 && !flagPoderElegirOpcion && (eleccionUsuario == DAR_RESULTADO_ULTIMO_LED_MODIFICADO)) {
-                                darUltimoLedPrendido();
                             } else {
                                 strcpy(cosasAPonerEnHercules, "\nNo es un ingreso valido.\n");
                                 controlarHercules = ENVIANDO_RESPUESTA;
@@ -194,6 +199,10 @@ void recibirYProcesarComandosRecibidos(void *p_param) {
                         }
                         break;
                     case ENVIANDO_RESPUESTA:
+                        if (!flagPoderElegirOpcion && (eleccionUsuario == DAR_RESULTADO_ULTIMO_LED_MODIFICADO)) {
+                            darUltimoLedPrendido();
+                            flagPoderElegirOpcion = true;
+                        }
                         putUSBUSART(cosasAPonerEnHercules, strlen(cosasAPonerEnHercules));
                         controlarHercules = ESPERANDO_RESPUESTA;
                         if (inicioDePrograma) {
